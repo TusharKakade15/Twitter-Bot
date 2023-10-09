@@ -1,0 +1,113 @@
+import tweepy
+import time
+from textblob import TextBlob
+
+# Authentication and Initialization code
+API_KEY= "API KEY"
+API_SECRET_KEY="API_SECRET_KEY"
+ACCESS_TOKEN="ACCESS_TOKEN "
+ACCESS_TOKEN_SECRET="ACCESS_TOKEN_SECRET"
+auth = tweepy.OAuthHandler(API_KEY, API_SECRET_KEY)
+auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+api = tweepy.API(auth)
+
+# api.verify_credentials()
+# try:
+#     api.verify_credentials()
+#     print("Everything Works")
+# except:
+#     print("Something went wrong")
+
+# Creating a StreamListener class
+
+# api.update_status("3rd Test Tweet from this bot")
+
+# user = api.get_user(screen_name="iHrithik")
+# print("User details:")
+# print(user.name)
+# print(user.description)
+# print(user.location)
+# print("Last 20 Followers:")
+# for follower in user.followers():
+#     print(follower.name)
+
+# follow
+# api.create_friendship(screen_name="elonmusk")
+
+# Some important variables which will be used later
+# bot_id = int(api.verify_credentials().id_str)
+# mention_id = 1
+# words = ["why", "how", "when", "what", "?","How","Why","When","What","please"]
+# message = "If you have any questions, feel free to send us a DM @{}"
+
+# # # The actual bot
+# while True:
+#     mentions = api.mentions_timeline(since_id=mention_id) # Finding mention tweets
+#     # Iterating through each mention tweet
+#     for mention in mentions:
+#         print("Mention tweet found")
+#         print(f"{mention.author.screen_name} - {mention.text}")
+#         mention_id = mention.id
+#         # Checking if the mention tweet is not a reply, we are not the author, and
+#         # that the mention tweet contains one of the words in our 'words' list
+#         # so that we can determine if the tweet might be a question.
+#         if mention.in_reply_to_status_id is None and mention.author.id != bot_id:
+#             if True in [word in mention.text.lower() for word in words]:
+#                 try:
+#                     print("Attempting to reply...")
+#                     api.update_status(message.format(mention.author.screen_name), in_reply_to_status_id=mention.id_str)
+#                     print("Successfully replied :)")
+#                 except Exception as exc:
+#                     print(exc)
+#     time.sleep(15) # The bot will only check for mentions every 15 seconds, unless you tweak this value
+
+
+
+bot_id = int(api.verify_credentials().id_str)
+
+mention_id = 1
+message = "If you have any questions or feedback, feel free to send us a DM @{}"
+words = ["why", "how", "when", "what", "?","How","Why","When","What","please"]
+
+# Retweet Bot with Mentions
+while True:
+    mentions = api.mentions_timeline(since_id=mention_id)
+    for mention in mentions:
+        print("Mention Tweet found!")
+        print(f"MENTION: {mention.author.screen_name} - {mention.text}")
+        mention_id = mention.id
+        mention_analysis = TextBlob(mention.text)
+        mention_analysis_score = mention_analysis.sentiment.polarity
+        print(f"Tweet has polarity score of {mention_analysis_score}")
+        if mention.in_reply_to_status_id is None and mention.author.id != bot_id:
+            if mention_analysis_score >= 0.5 and not mention.retweeted:
+                try:
+                    print("trying retweet...")
+                    api.retweet(mention.id)
+                    print("Tweet successfully retweeted!")
+                except Exception as err:
+                    print(err)
+            else:
+                print("Tweet will not be retweeted.")
+            
+            if (mention_analysis_score < 0.3) or True in [word in mention.text.lower() for word in words]:
+                try:
+                    print("Attempting to reply...")
+                    api.update_status(message.format(mention.author.screen_name), in_reply_to_status_id=mention.id_str)
+                    print("Successfully replied :)")
+                except Exception as exc:
+                    print(exc)
+            else:
+                print("Already seen")
+
+            if (mention_analysis_score >=0.3 and mention_analysis_score < 0.5) and not mention.favorited:
+                try:
+                    print("Attempting like...")
+                    api.create_favorite(mention.id)
+                    print("Tweet successfully liked :)")
+                except Exception as err:
+                    print(err)
+            else:
+                print("not likable tweet\n")
+            
+    time.sleep(15)
